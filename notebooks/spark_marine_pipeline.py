@@ -261,11 +261,5 @@ def main() -> None:
     )
 
 
-_should_run = __name__ == "__main__"
-try:
-    _should_run = _should_run or get_ipython() is not None  # noqa: F821
-except NameError:
-    pass
-
-if _should_run:
+if __name__ == "__main__":
     main()

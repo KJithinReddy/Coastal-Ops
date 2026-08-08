@@ -27,16 +27,9 @@ python setup_secrets.py
 Stores `database/lakebase-url`.
 
 ### 2. Spark sync (pipeline + Lakebase docs)
-Open a Serverless / cluster notebook in the Git folder and run:
+Open **`notebooks/run_marine_pipeline.ipynb`** → Run all  
 
-```python
-%run ./notebooks/spark_marine_pipeline
-```
-
-Or:
-```bash
-python notebooks/spark_marine_pipeline.py
-```
+(or in a notebook: import/run `notebooks/spark_marine_pipeline.py` — do not `%run` a notebook with the same name)
 
 This:
 - writes Delta → `/tmp/coastal_ops/marine_conditions_silver`
