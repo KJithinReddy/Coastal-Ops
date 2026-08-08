@@ -32,7 +32,7 @@ Open **`notebooks/run_marine_pipeline.ipynb`** → Run all
 (or in a notebook: import/run `notebooks/spark_marine_pipeline.py` — do not `%run` a notebook with the same name)
 
 This:
-- writes Delta → `/tmp/coastal_ops/marine_conditions_silver`
+- writes Delta → Unity Catalog table `….coastal_ops_marine_conditions` (not `/tmp`, which is blocked when public DBFS is disabled)
 - seeds ports, snapshots, and `marine_documents` in Lakebase
 
 ### 3. Embeddings (RAG)
@@ -78,7 +78,8 @@ python notebooks/analytics_app_events_to_delta.py
 (Main demo proof is MCP tool writes + Spark Delta from step 2.)
 
 ```python
-display(spark.read.format("delta").load("/tmp/coastal_ops/marine_conditions_silver"))
+display(spark.table("coastal_ops_marine_conditions"))
+# or fully qualified: display(spark.table("<catalog>.<schema>.coastal_ops_marine_conditions"))
 ```
 
 ## Layout

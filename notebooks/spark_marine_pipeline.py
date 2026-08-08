@@ -50,11 +50,9 @@ for _path in (_ROOT / "dashboard", _ROOT):
     if _path.exists() and str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-DELTA_PATH = os.environ.get(
-    "MARINE_DELTA_PATH",
-    "/tmp/coastal_ops/marine_conditions_silver",
-)
-CATALOG_TABLE = os.environ.get("MARINE_SPARK_TABLE", "")  # e.g. main.coastal.marine_conditions
+DELTA_PATH = os.environ.get("MARINE_DELTA_PATH", "")  # optional path or UC volume
+CATALOG_TABLE = os.environ.get("MARINE_SPARK_TABLE", "")  # e.g. main.default.coastal_ops_marine_conditions
+_LAST_DELTA_TARGET: str | None = None
 
 
 def _get_spark():
@@ -66,6 +64,27 @@ def _get_spark():
         raise RuntimeError(
             "Spark is required for this notebook. Run it on a Databricks cluster."
         ) from exc
+
+
+def _default_uc_table(spark) -> str:
+    """Unity Catalog table when public DBFS /tmp is disabled."""
+    if CATALOG_TABLE:
+        return CATALOG_TABLE
+    try:
+        catalog = spark.sql("SELECT current_catalog()").collect()[0][0]
+        schema = spark.sql("SELECT current_schema()").collect()[0][0]
+        return f"{catalog}.{schema}.coastal_ops_marine_conditions"
+    except Exception:
+        return "main.default.coastal_ops_marine_conditions"
+
+
+def _is_dbfs_disabled_error(exc: BaseException) -> bool:
+    text = f"{type(exc).__name__}: {exc}"
+    return (
+        "DBFS_DISABLED" in text
+        or "Public DBFS root is disabled" in text
+        or "56038" in text
+    )
 
 
 def fetch_conditions_rows() -> list[dict]:
@@ -102,7 +121,8 @@ def fetch_conditions_rows() -> list[dict]:
 
 
 def write_spark_tables(rows: list[dict]):
-    """Transform with Spark and write Delta (+ optional UC table)."""
+    """Transform with Spark and write Delta (UC table by default; path/volume optional)."""
+    global _LAST_DELTA_TARGET
     from pyspark.sql import functions as F
 
     spark = _get_spark()
@@ -119,19 +139,47 @@ def write_spark_tables(rows: list[dict]):
         .withColumn("pipeline_run_id", F.lit(str(uuid.uuid4())))
     )
 
-    silver.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(
-        DELTA_PATH
-    )
-    logger.info("Wrote Delta silver to %s (%d rows)", DELTA_PATH, silver.count())
+    # Prefer an explicit path/volume when set; otherwise write a UC managed table.
+    # Workspaces with public DBFS disabled reject /tmp/... path writes.
+    targets: list[tuple[str, str]] = []
+    if DELTA_PATH:
+        targets.append(("path", DELTA_PATH))
+    targets.append(("table", _default_uc_table(spark)))
 
-    if CATALOG_TABLE:
-        (
-            silver.write.format("delta")
-            .mode("overwrite")
-            .option("overwriteSchema", "true")
-            .saveAsTable(CATALOG_TABLE)
-        )
-        logger.info("Wrote Unity Catalog table %s", CATALOG_TABLE)
+    last_error: BaseException | None = None
+    for kind, target in targets:
+        try:
+            writer = (
+                silver.write.format("delta")
+                .mode("overwrite")
+                .option("overwriteSchema", "true")
+            )
+            if kind == "path":
+                writer.save(target)
+            else:
+                writer.saveAsTable(target)
+            _LAST_DELTA_TARGET = target
+            logger.info(
+                "Wrote Delta silver (%s) → %s (%d rows)",
+                kind,
+                target,
+                silver.count(),
+            )
+            break
+        except Exception as exc:
+            last_error = exc
+            if kind == "path" and _is_dbfs_disabled_error(exc):
+                logger.warning(
+                    "Path write blocked (DBFS disabled): %s — falling back to UC table",
+                    target,
+                )
+                continue
+            if kind == "table":
+                raise
+            logger.warning("Path write failed for %s: %s — trying UC table", target, exc)
+    else:
+        if last_error:
+            raise last_error
 
     return silver.toPandas().to_dict(orient="records")
 
@@ -244,7 +292,11 @@ def sync_lakebase(silver_rows: list[dict], also_harvest_docs: bool = True) -> di
                         doc_count += 1
                 conn.commit()
 
-    return {"snapshots": snap_count, "documents": doc_count, "delta_path": DELTA_PATH}
+    return {
+        "snapshots": snap_count,
+        "documents": doc_count,
+        "delta_target": _LAST_DELTA_TARGET or CATALOG_TABLE or DELTA_PATH or "",
+    }
 
 
 def main() -> None:
