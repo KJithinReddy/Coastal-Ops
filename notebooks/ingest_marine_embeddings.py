@@ -23,15 +23,15 @@ def _project_root() -> Path:
     except NameError:
         cwd = Path.cwd().resolve()
         for candidate in (cwd, cwd.parent, *cwd.parents):
-            if (candidate / "lakebase.py").exists():
-                return candidate
             if (candidate / "dashboard" / "lakebase.py").exists():
+                return candidate
+            if (candidate / "lakebase.py").exists():
                 return candidate
         return cwd.parent if cwd.name == "notebooks" else cwd
 
 
 _ROOT = _project_root()
-for _path in (_ROOT, _ROOT / "dashboard"):
+for _path in (_ROOT / "dashboard", _ROOT):
     if _path.exists() and str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 

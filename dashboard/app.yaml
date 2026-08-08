@@ -7,11 +7,7 @@ env:
     value: "database"
   - name: LAKEBASE_SECRET_KEY
     value: "lakebase-url"
-  - name: MARINE_EMBEDDING_MODEL
-    value: "sentence-transformers/all-MiniLM-L6-v2"
   - name: NWS_USER_AGENT
     value: "(dataexpert-capstone-coastal-ops-dashboard, student@example.com)"
-  - name: MARINE_LOCATIONS
-    value: "Miami, FL;Boston, MA;Seattle, WA;Galveston, TX;Norfolk, VA"
   - name: FLASK_RUN_HOST
     value: "0.0.0.0"
