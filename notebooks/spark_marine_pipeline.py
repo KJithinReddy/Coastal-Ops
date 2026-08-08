@@ -1,6 +1,11 @@
 """
 Spark marine pipeline (capstone requirement).
 
+Playground demo path (no Flask dashboard):
+1. Run this script / notebook → Delta + Lakebase docs
+2. Run notebooks/ingest_marine_embeddings.ipynb
+3. Use Playground + mcp_server tools
+
 Runs on a Databricks cluster / Serverless Spark session:
 1. Builds a ports DataFrame
 2. Fetches Open-Meteo marine + wind forecasts (driver-side collect + map)
@@ -10,8 +15,7 @@ Runs on a Databricks cluster / Serverless Spark session:
 
 Usage (Databricks notebook):
     %run ./spark_marine_pipeline
-or:
-    python notebooks/spark_marine_pipeline.py
+or open notebooks/spark_marine_pipeline.ipynb
 """
 
 from __future__ import annotations
