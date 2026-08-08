@@ -33,12 +33,29 @@ Open **`notebooks/run_marine_pipeline.ipynb`** → Run all
 
 This:
 - writes Delta → Unity Catalog table `….coastal_ops_marine_conditions` (not `/tmp`, which is blocked when public DBFS is disabled)
+- enables **Change Data Feed** on that table (`delta.enableChangeDataFeed=true`)
 - seeds ports, snapshots, and `marine_documents` in Lakebase
 
-### 3. Embeddings (RAG)
+### 3. CDF → analytics Delta (required for CDF score)
+Open **`notebooks/run_cdf_marine_analytics.ipynb`** → Run all.
+
+This:
+1. `ALTER TABLE … SET TBLPROPERTIES (delta.enableChangeDataFeed = true)`
+2. Reads changes with `spark.read.format("delta").option("readChangeFeed", "true")…`
+3. Writes UC Delta analytics:
+   - `….coastal_ops_marine_cdf_changes` (bronze CDF rows)
+   - `….coastal_ops_marine_cdf_analytics` (gold: daily changes by port / risk)
+
+**Evidence to screenshot:**
+```python
+display(spark.sql("SHOW TBLPROPERTIES <catalog>.<schema>.coastal_ops_marine_conditions"))
+display(spark.table("<catalog>.<schema>.coastal_ops_marine_cdf_analytics"))
+```
+
+### 4. Embeddings (RAG)
 Open **`notebooks/ingest_marine_embeddings.ipynb`** → Run all.
 
-### 4. Playground agent
+### 5. Playground agent
 1. AI Gateway → MCP → your **coastal-ops-mcp** URL (already registered if tools show up).
 2. Playground → attach MCP tools → paste system prompt below.
 3. Try the demo questions.
@@ -71,11 +88,11 @@ Prefer assess_and_act for go/no-go. Only answer with tool data.
 4. `Search marine context for dangerous coastal waves`
 5. `List open alerts` / `List voyages`
 
-### 5. Optional analytics Delta
+### 6. Optional app-events analytics Delta
 ```bash
 python notebooks/analytics_app_events_to_delta.py
 ```
-(Main demo proof is MCP tool writes + Spark Delta from step 2.)
+(Separate from CDF — this is Lakebase `app_events` → bronze/gold. CDF is step 3.)
 
 ```python
 display(spark.table("coastal_ops_marine_conditions"))
@@ -85,11 +102,13 @@ display(spark.table("coastal_ops_marine_conditions"))
 ## Layout
 
 ```
-mcp_server/                         # MCP Databricks App (required)
-dashboard/                          # optional Flask UI — not needed for demo
-notebooks/spark_marine_pipeline.py  # Spark + Lakebase sync
+mcp_server/                              # MCP Databricks App (required)
+dashboard/                               # optional Flask UI — not needed for demo
+notebooks/spark_marine_pipeline.py       # Spark + Lakebase sync + enable CDF
+notebooks/cdf_marine_analytics_to_delta.py  # readChangeFeed → analytics Delta
+notebooks/run_cdf_marine_analytics.ipynb
 notebooks/ingest_marine_embeddings.ipynb
-sql/
+sql/05_enable_change_data_feed.sql
 setup_secrets.py
 ```
 
@@ -102,3 +121,4 @@ setup_secrets.py
 | Unstructured → embeddings | marine narratives → MiniLM → Lakebase |
 | Databricks App | MCP app + exported Playground agent |
 | Agent read + write | MCP tools create/defer voyages, alerts, notes |
+| Change Data Feed | enable CDF on marine Delta → `readChangeFeed` → `coastal_ops_marine_cdf_analytics` |

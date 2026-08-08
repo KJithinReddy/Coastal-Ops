@@ -87,6 +87,44 @@ def _is_dbfs_disabled_error(exc: BaseException) -> bool:
     )
 
 
+def _delta_table_identifier(kind: str, target: str) -> str:
+    """SQL identifier for a UC table name or a Delta path."""
+    if kind == "path":
+        return f"delta.`{target}`"
+    return target
+
+
+def enable_change_data_feed(kind: str | None = None, target: str | None = None) -> str:
+    """
+    Capstone CDF requirement: turn on Delta Change Data Feed.
+
+      ALTER TABLE … SET TBLPROPERTIES (delta.enableChangeDataFeed = true)
+
+    Returns the SQL identifier that was altered.
+    """
+    spark = _get_spark()
+    resolved_kind = kind
+    resolved_target = target or _LAST_DELTA_TARGET or _default_uc_table(spark)
+    if resolved_kind is None:
+        resolved_kind = "path" if str(resolved_target).startswith("/") else "table"
+
+    ident = _delta_table_identifier(resolved_kind, resolved_target)
+    spark.sql(
+        f"ALTER TABLE {ident} SET TBLPROPERTIES (delta.enableChangeDataFeed = true)"
+    )
+    logger.info("Enabled Delta Change Data Feed on %s", ident)
+    try:
+        props = spark.sql(f"SHOW TBLPROPERTIES {ident}").collect()
+        for row in props:
+            key = row[0] if len(row) > 0 else None
+            val = row[1] if len(row) > 1 else None
+            if key and "enableChangeDataFeed" in str(key):
+                logger.info("TBLPROPERTIES %s = %s", key, val)
+    except Exception as exc:
+        logger.warning("Could not SHOW TBLPROPERTIES for %s: %s", ident, exc)
+    return ident
+
+
 def fetch_conditions_rows() -> list[dict]:
     """Pull live marine conditions for default ports (shared client with the app)."""
     from marine_client import DEFAULT_PORTS, MarineClient
@@ -165,6 +203,11 @@ def write_spark_tables(rows: list[dict]):
                 target,
                 silver.count(),
             )
+            # Capstone: enable CDF so later jobs can readChangeFeed.
+            try:
+                enable_change_data_feed(kind=kind, target=target)
+            except Exception as cdf_exc:
+                logger.warning("Could not enable Change Data Feed on %s: %s", target, cdf_exc)
             break
         except Exception as exc:
             last_error = exc
@@ -309,7 +352,8 @@ def main() -> None:
     result = sync_lakebase(silver_rows, also_harvest_docs=True)
     logger.info("Pipeline complete: %s", result)
     logger.info(
-        "Next: run notebooks/ingest_marine_embeddings.py to build the vector index."
+        "Next: run notebooks/run_cdf_marine_analytics.ipynb (CDF → analytics), "
+        "then notebooks/ingest_marine_embeddings.py."
     )
 
 
