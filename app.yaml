@@ -1,0 +1,7 @@
+command:
+  - "python"
+  - "app.py"
+
+env:
+  - name: FLASK_RUN_HOST
+    value: "0.0.0.0"

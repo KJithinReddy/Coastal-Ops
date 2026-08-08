@@ -2,18 +2,19 @@
 
 Spark + Open-Meteo/NWS → Lakebase → pgvector RAG → dashboard + MCP (Playground → export).
 
-## Deploy (important)
+## Deploy (important) — same flow you used for MCP
 
-Create **two** apps from https://github.com/KJithinReddy/Coastal-Ops (`main`):
+Custom app always asks for GitHub first. Create with an **empty** source path (repo root has a tiny stub), then **change the folder after create**:
 
-| App name | Source code path | What it is |
-|---|---|---|
-| `coastal-ops-dashboard` | **`dashboard`** | Flask UI (sync / search / ops) |
-| `coastal-ops-mcp` | **`mcp_server`** | MCP tools for Playground |
+### Dashboard
+1. Create app `coastal-ops-dashboard` → repo `Coastal-Ops` → branch `main` → **Source code path EMPTY**
+2. Do **not** add App Resources (`lakebase-url`, etc.)
+3. Wait until the app is created / compute is active (stub is fine)
+4. App **Settings** (or source / Git) → set Source code path to **`dashboard`** → Save → **Deploy**
 
-Do **not** leave Source code path empty. Empty path = whole repo (nested apps) and creation fails.
-
-After create, Overview → Source must show `/dashboard` or `/mcp_server`. If it does not, delete and recreate.
+### MCP (what you already did)
+1. Create with empty path (or whatever got it created)
+2. Then change Source code path to **`mcp_server`** → Deploy
 
 ## Layout
 
