@@ -1,11 +1,8 @@
 """
 Coastal Ops dashboard — Flask app for sync, search, and ops state.
 
-Same pattern as HW3's dashboard: this app never talks to the MCP server
-directly. It imports coastal_broker / marine_client / lakebase (duplicated
-because each Databricks App deploys from its own folder).
-
-The agent lives in Playground (MCP → export app), not in this repo.
+Deploy this repo root as a Databricks App (leave Source code path empty).
+Deploy mcp_server/ as a second app. The agent lives in Playground → export.
 
 Endpoints:
   GET  /healthz
@@ -20,7 +17,6 @@ Endpoints:
 
 Run locally:
     python app.py
-Deploy as its own Databricks App (dashboard/), separate from mcp_server/.
 """
 
 from __future__ import annotations
