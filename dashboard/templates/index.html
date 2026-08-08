@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b3a4a">
+  <title>Coastal Ops Copilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #0f2b37;
+      --muted: #55717a;
+      --surface: #ffffff;
+      --surface-strong: #f7fbfb;
+      --line: #d6e1e3;
+      --sea: #0f6e6b;
+      --sea-deep: #0c5553;
+      --sun: #d89b42;
+      --danger: #a4333d;
+      --radius: 12px;
+      --shadow: 0 4px 16px rgba(20, 68, 79, 0.07);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      font-family: "Source Sans 3", sans-serif;
+      color: var(--ink);
+      background: #eef5f6;
+      min-height: 100vh;
+    }
+    button, input, textarea, select { font: inherit; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(244, 183, 93, 0.76);
+      outline-offset: 2px;
+    }
+    .shell {
+      width: min(1180px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 38px 0 52px;
+    }
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: center;
+      padding: 6px 0 28px;
+    }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--sea-deep);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(2.1rem, 4.5vw, 3.2rem);
+      font-weight: 700;
+      letter-spacing: -0.045em;
+      line-height: 1.02;
+    }
+    .lede {
+      max-width: 560px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.45;
+    }
+    .health {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .health-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--sun);
+    }
+    .health[data-state="healthy"] .health-dot { background: #36a46b; }
+    .health[data-state="error"] .health-dot { background: var(--danger); }
+    .health button {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--sea-deep);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 16px;
+    }
+    .stack { display: grid; gap: 16px; }
+    .panel {
+      padding: clamp(18px, 2.5vw, 24px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .panel-heading {
+      display: flex;
+      gap: 11px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .step {
+      color: var(--sea);
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding-top: 3px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      letter-spacing: -0.025em;
+    }
+    .subhead {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+    label {
+      display: block;
+      margin: 14px 0 7px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    label:first-of-type { margin-top: 0; }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    .helper { margin: 8px 0 0; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+    .city-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .city-chip, .prompt-chip {
+      padding: 5px 9px;
+      border: 1px solid rgba(8, 123, 117, 0.19);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--sea-deep);
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .city-chip:hover, .prompt-chip:hover { background: #eef7f6; }
+    button.action {
+      width: 100%;
+      margin-top: 16px;
+      padding: 13px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--sea);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.action:hover { background: var(--sea-deep); }
+    button.action:disabled { opacity: 0.68; cursor: wait; }
+    .field-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 100px;
+      gap: 12px;
+      align-items: end;
+    }
+    .results-panel { margin-top: 16px; }
+    .results-topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+    .results-label { margin: 5px 0 0; color: var(--muted); font-size: 0.9rem; }
+    .result-count { color: var(--sea-deep); font-size: 0.85rem; font-weight: 700; }
+    .empty-state { padding: 24px 0 8px; color: var(--muted); text-align: center; }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .result {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface-strong);
+    }
+    .result-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--sea-deep);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .score {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(8, 123, 117, 0.11);
+      white-space: nowrap;
+    }
+    .result h3 { margin: 12px 0 6px; font-size: 1rem; }
+    .result p {
+      display: -webkit-box;
+      margin: 0;
+      overflow: hidden;
+      color: var(--muted);
+      line-height: 1.4;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 4;
+    }
+    .agent-reply {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: #12313e;
+      color: #dff2ee;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      font-size: 0.95rem;
+    }
+    .tool-list {
+      margin: 12px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+    .tool-list li {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-strong);
+      font-size: 0.88rem;
+    }
+    .tool-list strong { color: var(--sea-deep); }
+    details { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+    summary { color: var(--sea-deep); font-size: 0.86rem; font-weight: 700; cursor: pointer; }
+    pre {
+      margin: 12px 0 0;
+      padding: 15px;
+      border-radius: 10px;
+      background: #12313e;
+      color: #dff2ee;
+      overflow: auto;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .side-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .stat {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .stat .n { font-size: 1.4rem; font-weight: 700; color: var(--sea-deep); }
+    .stat .l { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+    @media (max-width: 900px) {
+      .workbench { grid-template-columns: 1fr; }
+      .hero { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Capstone · Databricks AI</p>
+        <h1>Coastal Ops<br>Copilot</h1>
+        <p class="lede">Marine forecasts + coastal alerts in Lakebase. Sync and search here; the agent runs in Playground via MCP.</p>
+      </div>
+      <div class="health" id="health" data-state="idle">
+        <span class="health-dot" aria-hidden="true"></span>
+        <span id="healthText">Check connection</span>
+        <button id="healthBtn" type="button">Health</button>
+      </div>
+    </header>
+
+    <section class="workbench" aria-label="Coastal ops tools">
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-heading">
+            <span class="step">01</span>
+            <div>
+              <h2>Sync marine data</h2>
+              <p class="subhead">Open-Meteo waves/swell + NWS coastal alerts → <code>marine_documents</code>.</p>
+            </div>
+          </div>
+          <label for="locations">Coastal locations</label>
+          <input id="locations" type="text" value="Miami, FL; Boston, MA; Seattle, WA; Galveston, TX; Norfolk, VA">
+          <p class="helper">Separate with semicolons. Then run the embedding notebook (or Spark pipeline) before searching.</p>
+          <div class="city-list" id="cityList"></div>
+          <label for="limit">Docs per location</label>
+          <input id="limit" type="number" value="40" min="1" max="200">
+          <button class="action" id="syncBtn" type="button">Sync marine data</button>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span class="step">02</span>
+            <div>
+              <h2>Search by meaning</h2>
+              <p class="subhead">pgvector retrieval over marine narratives.</p>
+            </div>
+          </div>
+          <label for="query">What marine risk are you looking for?</label>
+          <input id="query" type="text" value="high waves and dangerous coastal conditions">
+          <div class="field-row">
+            <div>
+              <label for="topk">Best matches</label>
+            </div>
+            <input id="topk" type="number" value="5" min="1" max="20">
+          </div>
+          <button class="action" id="searchBtn" type="button">Search marine narratives</button>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-heading">
+            <span class="step">03</span>
+            <div>
+              <h2>Ops state</h2>
+              <p class="subhead">Voyages and alerts written by the Playground MCP agent (or created here).</p>
+            </div>
+          </div>
+          <p class="helper">Agent: deploy <code>mcp_server/</code> → register MCP → Playground → export app.</p>
+          <div class="side-stats">
+            <div class="stat"><div class="n" id="voyageCount">—</div><div class="l">Voyages</div></div>
+            <div class="stat"><div class="n" id="alertCount">—</div><div class="l">Open alerts</div></div>
+          </div>
+          <button class="action" id="refreshBtn" type="button" style="background:#345663;margin-top:12px;">Refresh voyages & alerts</button>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel results-panel" aria-live="polite">
+      <div class="results-topline">
+        <div>
+          <h2>Retrieved context</h2>
+          <p class="results-label" id="resultsLabel">Search results and sync summaries appear here.</p>
+        </div>
+        <span class="result-count" id="resultCount"></span>
+      </div>
+      <div class="empty-state" id="emptyState">Sync marine data, embed with the notebook, then search. Use Playground for agent actions.</div>
+      <div class="result-grid" id="results"></div>
+      <details>
+        <summary>Raw response</summary>
+        <pre id="out">{}</pre>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    const out = document.getElementById("out");
+    const results = document.getElementById("results");
+    const resultsLabel = document.getElementById("resultsLabel");
+    const resultCount = document.getElementById("resultCount");
+    const emptyState = document.getElementById("emptyState");
+    const health = document.getElementById("health");
+    const healthText = document.getElementById("healthText");
+    const cities = ["Miami, FL", "Boston, MA", "Seattle, WA", "Galveston, TX", "Norfolk, VA", "San Francisco, CA"];
+
+    function show(data) { out.textContent = JSON.stringify(data, null, 2); }
+
+    function parseLocations(raw) {
+      return raw.split(";").map(s => s.trim()).filter(Boolean);
+    }
+
+    function setBusy(button, busy, busyText) {
+      if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
+      button.disabled = busy;
+      button.textContent = busy ? busyText : button.dataset.originalText;
+    }
+
+    function resetResults(message) {
+      results.replaceChildren();
+      resultCount.textContent = "";
+      emptyState.hidden = false;
+      emptyState.textContent = message;
+    }
+
+    function renderResults(data) {
+      results.replaceChildren();
+      const hits = Array.isArray(data.results) ? data.results : [];
+      resultsLabel.textContent = data.query ? `Matches for “${data.query}”` : "Latest response";
+      resultCount.textContent = hits.length ? `${hits.length} match${hits.length === 1 ? "" : "es"}` : "";
+      emptyState.hidden = hits.length > 0;
+      emptyState.textContent = data.message || "No matching marine narratives were found.";
+
+      hits.forEach((hit) => {
+        const card = document.createElement("article");
+        card.className = "result";
+        const meta = document.createElement("div");
+        meta.className = "result-meta";
+        const location = document.createElement("span");
+        location.textContent = `${hit.location || "Marine report"} · ${hit.source_type || "doc"}`;
+        const score = document.createElement("span");
+        score.className = "score";
+        score.textContent = typeof hit.similarity === "number"
+          ? `${Math.round(hit.similarity * 100)}% similar`
+          : "match";
+        meta.append(location, score);
+        const title = document.createElement("h3");
+        title.textContent = hit.headline || hit.event || "Marine narrative";
+        const text = document.createElement("p");
+        text.textContent = hit.chunk_text || hit.narrative_text || "";
+        card.append(meta, title, text);
+        results.append(card);
+      });
+    }
+
+    async function refreshCounts() {
+      try {
+        const [vResp, aResp] = await Promise.all([
+          fetch("/voyages"),
+          fetch("/alerts?status=open"),
+        ]);
+        const voyages = await vResp.json();
+        const alerts = await aResp.json();
+        document.getElementById("voyageCount").textContent = (voyages.voyages || []).length;
+        document.getElementById("alertCount").textContent = (alerts.alerts || []).length;
+      } catch (_) {
+        document.getElementById("voyageCount").textContent = "?";
+        document.getElementById("alertCount").textContent = "?";
+      }
+    }
+
+    cities.forEach((city) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "city-chip";
+      chip.textContent = city;
+      chip.addEventListener("click", () => {
+        const input = document.getElementById("locations");
+        const current = parseLocations(input.value);
+        if (!current.some((item) => item.toLowerCase() === city.toLowerCase())) {
+          input.value = [...current, city].join("; ");
+        }
+      });
+      document.getElementById("cityList").append(chip);
+    });
+
+    document.getElementById("syncBtn").onclick = async (event) => {
+      const button = event.currentTarget;
+      const locations = parseLocations(document.getElementById("locations").value);
+      const limit = Number(document.getElementById("limit").value || 40);
+      setBusy(button, true, "Syncing marine data…");
+      resetResults("Collecting Open-Meteo marine forecasts and NWS alerts…");
+      try {
+        const resp = await fetch("/marine/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locations, limit }),
+        });
+        const data = await resp.json();
+        show(data);
+        resultsLabel.textContent = resp.ok ? "Sync complete" : "Sync needs attention";
+        emptyState.textContent = resp.ok
+          ? `${data.synced || 0} documents synced (${data.snapshots || 0} snapshots). Run the embedding notebook next.`
+          : (data.error || "Sync failed.");
+      } catch (error) {
+        show({ error: error.message });
+        emptyState.textContent = "Could not reach the sync service.";
+      } finally {
+        setBusy(button, false);
+      }
+    };
+
+    document.getElementById("searchBtn").onclick = async (event) => {
+      const button = event.currentTarget;
+      const query = document.getElementById("query").value;
+      const top_k = Number(document.getElementById("topk").value || 5);
+      setBusy(button, true, "Searching…");
+      resetResults("Embedding your question and comparing marine narratives…");
+      try {
+        const resp = await fetch("/marine/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, top_k }),
+        });
+        const data = await resp.json();
+        show(data);
+        renderResults(data);
+      } catch (error) {
+        show({ error: error.message });
+        resetResults("Search failed.");
+      } finally {
+        setBusy(button, false);
+      }
+    };
+
+    document.getElementById("refreshBtn").onclick = () => refreshCounts();
+
+    document.getElementById("healthBtn").onclick = async (event) => {
+      const button = event.currentTarget;
+      setBusy(button, true, "Checking…");
+      try {
+        const resp = await fetch("/healthz");
+        const data = await resp.json();
+        show(data);
+        health.dataset.state = resp.ok ? "healthy" : "error";
+        healthText.textContent = resp.ok ? "Service online" : "Service unavailable";
+      } catch (error) {
+        show({ error: error.message });
+        health.dataset.state = "error";
+        healthText.textContent = "Service unavailable";
+      } finally {
+        setBusy(button, false);
+      }
+    };
+
+    refreshCounts();
+  </script>
+</body>
+</html>
