@@ -378,9 +378,9 @@ def _bootstrap() -> None:
         )
 
 
-_bootstrap()
-
 if __name__ == "__main__":
+    # Do not touch Lakebase at import time — Apps health checks need a clean start.
+    _bootstrap()
     host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
     port = int(os.getenv("FLASK_RUN_PORT", os.getenv("DATABRICKS_APP_PORT", "8000")))
     logger.info("Starting Coastal Ops dashboard on http://%s:%s", host, port)

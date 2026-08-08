@@ -2,11 +2,6 @@ command:
   - "python"
   - "coastal_mcp_server.py"
 
-resources:
-  - name: requirements
-    source:
-      path: ./requirements.txt
-
 env:
   - name: LAKEBASE_SECRET_SCOPE
     value: "database"
