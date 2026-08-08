@@ -3,11 +3,5 @@ command:
   - "app.py"
 
 env:
-  - name: LAKEBASE_SECRET_SCOPE
-    value: "database"
-  - name: LAKEBASE_SECRET_KEY
-    value: "lakebase-url"
-  - name: NWS_USER_AGENT
-    value: "(dataexpert-capstone-coastal-ops-dashboard, student@example.com)"
   - name: FLASK_RUN_HOST
     value: "0.0.0.0"
