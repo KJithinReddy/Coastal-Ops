@@ -2,50 +2,44 @@
 
 Spark + Open-Meteo/NWS → Lakebase → pgvector RAG → dashboard + MCP (Playground → export).
 
-## Deploy (important) — same flow you used for MCP
+## Deploy dashboard (use this — Custom GitHub create keeps failing on `main`)
 
-Custom app always asks for GitHub first. Create with an **empty** source path (repo root has a tiny stub), then **change the folder after create**:
+`main` has both `dashboard/` and `mcp_server/` (two apps). Databricks create is unreliable with that.
 
-### Dashboard
-1. Create app `coastal-ops-dashboard` → repo `Coastal-Ops` → branch `main` → **Source code path EMPTY**
-2. Do **not** add App Resources (`lakebase-url`, etc.)
-3. Wait until the app is created / compute is active (stub is fine)
-4. App **Settings** (or source / Git) → set Source code path to **`dashboard`** → Save → **Deploy**
+Use the **dashboard-only branch**:
 
-### MCP (what you already did)
-1. Create with empty path (or whatever got it created)
-2. Then change Source code path to **`mcp_server`** → Deploy
+1. Delete any failed `coastal-ops-dashboard` app.
+2. Create app → Custom → GitHub  
+   - Repo: `https://github.com/KJithinReddy/Coastal-Ops`  
+   - **Branch: `dashboard-deploy`** (not `main`)  
+   - **Source code path: EMPTY**  
+   - **Do not** add App Resources  
+3. Create / Deploy  
+4. After running, grant the app access to secret scope `database` if sync/search fails on DB.
 
-## Layout
+## Deploy MCP
+
+Already working: source path `mcp_server` on branch `main` (your create-then-change-folder flow).
+
+## Layout (`main`)
 
 ```
-dashboard/          # Flask app only
-mcp_server/         # FastMCP app only
+dashboard/          # Flask app
+mcp_server/         # FastMCP app
 notebooks/
 sql/
-setup_secrets.py
-README.md
 ```
 
-## Prerequisites
-1. Lakebase + `python setup_secrets.py` → secret `database/lakebase-url`
-2. Grant that secret to both apps when Databricks asks
+Branch `dashboard-deploy` = dashboard files only at repo root (for Apps create).
 
 ## After both apps are up
-1. Dashboard → Sync marine data
-2. Run `notebooks/ingest_marine_embeddings.ipynb`
-3. Dashboard → Search
-4. AI Gateway → add MCP (`coastal-ops-mcp` URL) → Playground → export agent
+1. Dashboard → Sync marine data  
+2. Run `notebooks/ingest_marine_embeddings.ipynb` (from `main` Git folder)  
+3. Search + Playground MCP agent  
 
 ## Local
 
 ```bash
 cd dashboard && pip install -r requirements.txt && python app.py
 cd mcp_server && pip install -r requirements.txt && PORT=8001 python coastal_mcp_server.py
-```
-
-Sync shared modules after edits:
-
-```bash
-cp dashboard/coastal_broker.py dashboard/lakebase.py dashboard/marine_client.py mcp_server/
 ```
